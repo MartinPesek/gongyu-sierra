@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace Web
 {
@@ -19,6 +14,17 @@ namespace Web
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((context, builder) =>
+                {
+                    var keyVaultConfigBuilder = new ConfigurationBuilder();
+
+                    keyVaultConfigBuilder.AddAzureKeyVault(
+                        $"https://{Environment.GetEnvironmentVariable("KEYVAULT_NAME")}.vault.azure.net/",
+                        Environment.GetEnvironmentVariable("KEYVAULT_CLIENT_ID"),
+                        Environment.GetEnvironmentVariable("KEYVAULT_CLIENT_SECRET"));
+
+                    builder.AddConfiguration(keyVaultConfigBuilder.Build());
+                })
                 .UseStartup<Startup>();
     }
 }
