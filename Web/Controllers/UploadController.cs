@@ -27,7 +27,7 @@ namespace Web.Controllers
             _storageService = storageClient.GetContainerReference("ofs");
             _storageService.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, null, null);
 
-            _dropboxClient = new DropboxClient(configuration["DROPBOX-ACCESS-KEY"], new DropboxClientConfig("gongyu-sierra/1.0"));
+            _dropboxClient = new DropboxClient(configuration["DROPBOX-ACCESS-KEY"], new DropboxClientConfig("tofru/1.0"));
         }
 
         [Route("")]
