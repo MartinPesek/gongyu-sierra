@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -45,7 +46,7 @@ namespace Web.Controllers
             }
 
             string resultUrl;
-            if (data.StartsWith("http"))
+            if (data.StartsWith("http", StringComparison.InvariantCultureIgnoreCase))
             {
                 resultUrl = SaveUrlToFile(data).Result;
             }
@@ -67,7 +68,7 @@ namespace Web.Controllers
 
             foreach (var s in mimeTypeBase64)
             {
-                var colonIndex = s.IndexOf(':');
+                var colonIndex = s.IndexOf(':', StringComparison.InvariantCultureIgnoreCase);
                 if (colonIndex == -1)
                 {
                     if (s.StartsWith("base64,", StringComparison.InvariantCultureIgnoreCase))
@@ -108,11 +109,11 @@ namespace Web.Controllers
                 // TODO: add some error handling (HttpRequestException)
                 // TODO: check if downloading exceeds max. file size
 
-                using (var result = await client.GetAsync(url))
+                using (var result = await client.GetAsync(url).ConfigureAwait(false))
                 {
                     if (result.IsSuccessStatusCode)
                     {
-                        var rawData = await result.Content.ReadAsByteArrayAsync();
+                        var rawData = await result.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
                         resultUrl = SaveFile(rawData, result.Content.Headers.ContentType.ToString()).Result;
                     }
                 }
@@ -130,12 +131,12 @@ namespace Web.Controllers
 
             // TODO: dropbox uploads should be done in background because user does not need to wait for it (IHostedService?)
 #pragma warning disable 4014
-            Task.Run(async () => await UploadToDropbox(rawData, filename));
+            Task.Run(async () => await UploadToDropbox(rawData, filename).ConfigureAwait(false));
 #pragma warning restore 4014
 
 //            await Task.WhenAll(uploadToAzureStorage, uploadToDropbox);
 
-            var resultUrl = await uploadToAzureStorage;
+            var resultUrl = await uploadToAzureStorage.ConfigureAwait(false);
 
             return resultUrl;
         }
@@ -143,19 +144,19 @@ namespace Web.Controllers
         private async Task<string> UploadToAzureStorage(byte[] rawData, string mimeType, string filename)
         {
             var blob = _storageService.GetBlockBlobReference(filename);
-            await blob.UploadFromByteArrayAsync(rawData, 0, rawData.Length);
+            await blob.UploadFromByteArrayAsync(rawData, 0, rawData.Length).ConfigureAwait(false);
 
             blob.Properties.ContentType = mimeType;
-            await blob.SetPropertiesAsync();
+            await blob.SetPropertiesAsync().ConfigureAwait(false);
 
             return blob.Uri.ToString();
         }
 
         private async Task UploadToDropbox(byte[] rawData, string filename)
         {
-            var dropboxFilename = DateTime.Now.ToString("yyyy-MM-dd") + "_" + filename;
-            await _dropboxClient.Files.UploadAsync("/ofs/" + dropboxFilename, WriteMode.Add.Instance,
-                body: new MemoryStream(rawData));
+            var dropboxFilename = DateTime.Now.ToString("yyyy-MM-dd", DateTimeFormatInfo.InvariantInfo) + "_" + filename;
+
+            await _dropboxClient.Files.UploadAsync("/ofs/" + dropboxFilename, WriteMode.Add.Instance, body: new MemoryStream(rawData)).ConfigureAwait(false);
         }
 
         private static string GetExtensionFromMimeType(string mimeType)
